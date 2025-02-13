@@ -1,8 +1,8 @@
 import asyncio
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 
 from constants import TOKEN
-from section1.commands import rt
+from section1.commands import rt, Bot
 import database.database
 
 
