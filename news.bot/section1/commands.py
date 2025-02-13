@@ -108,7 +108,6 @@ async def send_file(message: Message, bot: Bot):
 
     nk_id = THE_ID
     
-    # Send the file
     await bot.send_document(chat_id=nk_id, document=input_file)
 
     await message.answer("Տվյաները հաջողությամբ պահպանվել են")
