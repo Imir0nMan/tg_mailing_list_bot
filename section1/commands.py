@@ -3,6 +3,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+import pandas as pd
 import re
 import section1.keyboards as kb
 from constants import THE_ID
@@ -10,6 +11,7 @@ from constants import THE_ID
 rt = Router()
 
 usr_data = {}
+all_users_data = []
 
 
 class Registr(StatesGroup):
@@ -20,10 +22,9 @@ class Registr(StatesGroup):
 
 
 @rt.message(CommandStart())
-async def strt(message: Message):
+async def strt(message: Message, state: FSMContext):
 	usr_data["user_id"] = message.from_user.id
-	await message.answer("""Բարև, նախ պետք է գրանցվել /reg հրամանով,
-	ապա ընտրել նախընտրելի հեշթեգերը /tags հրամանով""")
+	await message.answer("""Բարև, նախ պետք է գրանցվել /reg հրամանով""")
 
 
 @rt.message(Command("reg"))
@@ -50,7 +51,7 @@ async def steptwo(message: Message, state: FSMContext):
 		await state.set_state(Registr.email)
 		await message.answer("էլեկտրոնային հասցե «email»")
 	else:
-		await message.answer("Տարիքը պետք է լինի 15-85 միջակայքում։ Խնդրում եմ կրկին մուտքագրել:")
+		await message.answer("Տարիքը պետք է լինի 14-85 միջակայքում։ Խնդրում եմ կրկին մուտքագրել:")
 
 
 @rt.message(Registr.email)
@@ -80,24 +81,46 @@ async def stepfor(message: Message, state: FSMContext):
 
 @rt.message(Command("tags"))
 async def tags(message: Message):
-	await message.answer("""Ընտրեք տարբերակներից մինիմում 1ը, 
+	await message.answer("""
+		Ընտրեք տարբերակներից մինիմում 1ը,
+		ընտրված հեշթեգերը տեսնելու համար կիրառեք /list_tags հրամանը,
+		սխալ հեշթեգ ընտրելու դեպքում կրկին սեղմեք /tags հրամանին 
+		այնուհետև նորից ընտրեք անհրաժեշտները,
 		ավարտելուց հետո օգտագործեք /finish հրամանը """, reply_markup=kb.inlinetags1())
-	global i 
+	global i, alltags
 	i = 0
+	alltags = []
 
 
 @rt.callback_query()
 async def handle_hashtags(callback: CallbackQuery):
 	hashtag = callback.data
-	global i 
+	global i, alltags
 	i += 1
 	await callback.answer(f"Դուք ընտրել եք {hashtag}-ը")
 	usr_data.update({f"tag {(i)}" : hashtag})
+	alltags.append(hashtag)
+
+
+@rt.message(Command("list_tags"))
+async def list_tags(message: Message):
+	global alltags
+	strtags = ", ".join(alltags)
+	await message.answer(f"Ձեր ընտրած հեշթեգերը հետևյալն են {strtags}")
+	await message.answer("եթե ավարտել եք սեղմեք /finish հրամանին")
+
+
+async def save_to_excel():
+	df = pd.DataFrame(all_users_data)
+	df.to_excel("userdata.xlsx", index=False, engine="openpyxl")
 
 
 @rt.message(Command('finish'))
-async def send_file(message: Message, bot: Bot):
-    # Create the txt file based on user data (including hashtags)
+async def send_file(message: Message):
+	all_users_data.append(usr_data.copy())	
+	await save_to_excel()
+	"""
+	# Create the txt file based on user data (including hashtags)
     txt_data = "\n".join([f"{key}: {value}" for key, value in usr_data.items()])
     
     txt_file = "userdata.txt"
@@ -109,6 +132,13 @@ async def send_file(message: Message, bot: Bot):
     nk_id = THE_ID
     
     await bot.send_document(chat_id=nk_id, document=input_file)
+	"""
+	await message.answer("Տվյաները հաջողությամբ պահպանվել են")
 
-    await message.answer("Տվյաները հաջողությամբ պահպանվել են")
 
+@rt.message(Command('getdata'))
+async def send_excel(message: Message, bot: Bot):
+	excel_file = "userdata.xlsx"
+	input_file = FSInputFile(excel_file)
+	nk_id = THE_ID
+	await bot.send_document(chat_id=nk_id, document=input_file)
