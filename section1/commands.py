@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 import pandas as pd
 import re
 import section1.keyboards as kb
+from section1.keyboards import timelist
 from constants import THE_ID
 
 rt = Router()
@@ -19,11 +20,11 @@ class Registr(StatesGroup):
 	age = State()
 	email = State()
 	prfrd_time = State()
+	hashtags = State()
 
 
 @rt.message(CommandStart())
 async def strt(message: Message, state: FSMContext):
-	usr_data["user_id"] = message.from_user.id
 	await message.answer("""Բարև, նախ պետք է գրանցվել /reg հրամանով""")
 
 
@@ -68,46 +69,54 @@ async def steptre(message: Message, state: FSMContext):
 		return
 	await state.update_data(email=email)
 	await state.set_state(Registr.prfrd_time)
-	await message.answer("նախընտրելի ժամ՝ 8:00, 13:00, 21:00")
+	await message.answer("նախընտրելի ժամ՝ 8:00, 13:00, 21:00", reply_markup=kb.settime())
 
 
-@rt.message(Registr.prfrd_time)
-async def stepfor(message: Message, state: FSMContext):
-	await state.update_data(prfrd_time=message.text)
-	usr_data.update(await state.get_data())
-	await message.answer("Այժմ կարող եք ընտրել հեշթեգերը /tags")
-	await state.clear()
+@rt.callback_query(F.data.in_(timelist))
+async def stepfor(callback: CallbackQuery, state: FSMContext):
+	await state.update_data(prfrd_time=callback.data)
+	await callback.message.answer("Այժմ կարող եք ընտրել հեշթեգերը /tags")
+	await callback.answer("ընտրությունը պահպանված է")
 
 
 @rt.message(Command("tags"))
-async def tags(message: Message):
+async def tags(message: Message, state: FSMContext):
+	await state.set_state(Registr.hashtags)
+	await state.update_data(tags=[])
 	await message.answer("""
 		Ընտրեք տարբերակներից մինիմում 1ը,
 		ընտրված հեշթեգերը տեսնելու համար կիրառեք /list_tags հրամանը,
 		սխալ հեշթեգ ընտրելու դեպքում կրկին սեղմեք /tags հրամանին 
 		այնուհետև նորից ընտրեք անհրաժեշտները,
 		ավարտելուց հետո օգտագործեք /finish հրամանը """, reply_markup=kb.inlinetags1())
-	global i, alltags
+	global i
 	i = 0
-	alltags = []
 
 
 @rt.callback_query()
-async def handle_hashtags(callback: CallbackQuery):
+async def handle_hashtags(callback: CallbackQuery, state: FSMContext):
 	hashtag = callback.data
-	global i, alltags
+	global i
 	i += 1
+	usr_data = await state.get_data()
+	tags = usr_data.get("tags", [])
+	if hashtag not in tags:
+		tags.append(hashtag)
+		await state.update_data(tags=tags)
+	
 	await callback.answer(f"Դուք ընտրել եք {hashtag}-ը")
-	usr_data.update({f"tag {(i)}" : hashtag})
-	alltags.append(hashtag)
 
 
 @rt.message(Command("list_tags"))
-async def list_tags(message: Message):
-	global alltags
-	strtags = ", ".join(alltags)
-	await message.answer(f"Ձեր ընտրած հեշթեգերը հետևյալն են {strtags}")
-	await message.answer("եթե ավարտել եք սեղմեք /finish հրամանին")
+async def list_tags(message: Message, state: FSMContext):
+	usr_data = await state.get_data()
+	tags = usr_data.get("tags", [])
+	strtags = ", ".join(tags)
+	if not tags:
+		await message.answer("Դուք դեռ հեշթեգեր չեք ընտրել")
+	else:
+		await message.answer(f"Ձեր ընտրած հեշթեգերը հետևյալն են {strtags}")
+		await message.answer("եթե ավարտել եք սեղմեք /finish հրամանին")
 
 
 async def save_to_excel():
@@ -116,23 +125,16 @@ async def save_to_excel():
 
 
 @rt.message(Command('finish'))
-async def send_file(message: Message):
-	all_users_data.append(usr_data.copy())	
+async def send_file(message: Message, state: FSMContext):
+	usr_data = {"user_id": message.from_user.id}
+	for i in all_users_data:
+		if i["user_id"] == usr_data["user_id"]:
+			all_users_data.remove(i)
+	usr_data.update(await state.get_data())
+	all_users_data.append(usr_data.copy())
+	await state.clear()
 	await save_to_excel()
-	"""
-	# Create the txt file based on user data (including hashtags)
-    txt_data = "\n".join([f"{key}: {value}" for key, value in usr_data.items()])
-    
-    txt_file = "userdata.txt"
-    with open(txt_file, "w", encoding="utf-8") as file:
-        file.write(txt_data)
 
-    input_file = FSInputFile(txt_file)
-
-    nk_id = THE_ID
-    
-    await bot.send_document(chat_id=nk_id, document=input_file)
-	"""
 	await message.answer("Տվյաները հաջողությամբ պահպանվել են")
 
 
@@ -142,3 +144,5 @@ async def send_excel(message: Message, bot: Bot):
 	input_file = FSInputFile(excel_file)
 	nk_id = THE_ID
 	await bot.send_document(chat_id=nk_id, document=input_file)
+
+
