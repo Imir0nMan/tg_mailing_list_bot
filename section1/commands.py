@@ -8,6 +8,7 @@ import re
 import section1.keyboards as kb
 from section1.keyboards import timelist
 from constants import THE_ID
+import  database.database as db
 
 rt = Router()
 
@@ -23,7 +24,7 @@ class Registr(StatesGroup):
 	hashtags = State()
 
 
-@rt.message(CommandStart())
+@rt.message(Command("start", "restart"))
 async def strt(message: Message, state: FSMContext):
 	await message.answer("""Բարև, նախ պետք է գրանցվել /reg հրամանով""")
 
@@ -131,6 +132,7 @@ async def send_file(message: Message, state: FSMContext):
 		if i["user_id"] == usr_data["user_id"]:
 			all_users_data.remove(i)
 	usr_data.update(await state.get_data())
+	db.addtodb(usr_data)
 	all_users_data.append(usr_data.copy())
 	await state.clear()
 	await save_to_excel()

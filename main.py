@@ -2,8 +2,7 @@ import asyncio
 from aiogram import Dispatcher
 
 from constants import TOKEN
-from section1.commands import rt, Bot
-import database.database
+from section1.extendedcommands import rt, Bot
 
 
 bot = Bot(token=TOKEN)
