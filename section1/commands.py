@@ -8,7 +8,7 @@ import re
 import section1.keyboards as kb
 from section1.keyboards import timelist
 from constants import THE_ID
-import  database.database as db
+import database.database as db
 
 rt = Router()
 
@@ -48,12 +48,12 @@ async def steptwo(message: Message, state: FSMContext):
 		await message.answer("Խնդրում եմ մուտքագրել միայն թվեր")
 		return
 	age = int(message.text)
-	if 14 <= age <= 85:
+	if 12 <= age <= 85:
 		await state.update_data(age=age)
 		await state.set_state(Registr.email)
 		await message.answer("էլեկտրոնային հասցե «email»")
 	else:
-		await message.answer("Տարիքը պետք է լինի 14-85 միջակայքում։ Խնդրում եմ կրկին մուտքագրել:")
+		await message.answer("Տարիքը պետք է լինի 12-85 միջակայքում։ Խնդրում եմ կրկին մուտքագրել:")
 
 
 @rt.message(Registr.email)
@@ -90,38 +90,30 @@ async def tags(message: Message, state: FSMContext):
 		սխալ հեշթեգ ընտրելու դեպքում կրկին սեղմեք /tags հրամանին 
 		այնուհետև նորից ընտրեք անհրաժեշտները,
 		ավարտելուց հետո օգտագործեք /finish հրամանը """, reply_markup=kb.inlinetags1())
-	global i
-	i = 0
 
 
 @rt.callback_query()
 async def handle_hashtags(callback: CallbackQuery, state: FSMContext):
 	hashtag = callback.data
-	global i
-	i += 1
 	usr_data = await state.get_data()
 	tags = usr_data.get("tags", [])
-	if hashtag not in tags:
-		tags.append(hashtag)
-		await state.update_data(tags=tags)
+	max_tags = 3
+	if hashtag in tags:
+		await callback.answer("❗ Դուք արդեն ընտրել եք այս հեշթեգը։")
+		return
 	
+	if len(tags) >= max_tags:
+		await callback.answer(f"❌ Կարող եք ընտրել առավելագույնը {max_tags} հեշթեգ։")
+		return
+
+	tags.append(hashtag)
+	await state.update_data(tags=tags)
 	await callback.answer(f"Դուք ընտրել եք {hashtag}-ը")
 
 
-@rt.message(Command("list_tags"))
-async def list_tags(message: Message, state: FSMContext):
-	usr_data = await state.get_data()
-	tags = usr_data.get("tags", [])
-	strtags = ", ".join(tags)
-	if not tags:
-		await message.answer("Դուք դեռ հեշթեգեր չեք ընտրել")
-	else:
-		await message.answer(f"Ձեր ընտրած հեշթեգերը հետևյալն են {strtags}")
-		await message.answer("եթե ավարտել եք սեղմեք /finish հրամանին")
-
-
 async def save_to_excel():
-	df = pd.DataFrame(all_users_data)
+	x_files = db.get_user_data()
+	df = pd.DataFrame(x_files)
 	df.to_excel("userdata.xlsx", index=False, engine="openpyxl")
 
 
@@ -135,13 +127,13 @@ async def send_file(message: Message, state: FSMContext):
 	db.addtodb(usr_data)
 	all_users_data.append(usr_data.copy())
 	await state.clear()
-	await save_to_excel()
 
 	await message.answer("Տվյաները հաջողությամբ պահպանվել են")
 
 
 @rt.message(Command('getdata'))
 async def send_excel(message: Message, bot: Bot):
+	await save_to_excel()
 	excel_file = "userdata.xlsx"
 	input_file = FSInputFile(excel_file)
 	nk_id = THE_ID

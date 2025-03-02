@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-timelist = ["9:00", "12:00", "15:00", "20:16", "18:00", "21:00", "00:00", "Realtime"]
+timelist = ["9:00", "12:00", "15:00", "18:00", "21:00", "00:00", "Realtime"]
 
 hashtags = ["#Volunteering",
 "#YouthProjects",

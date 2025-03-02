@@ -14,6 +14,19 @@ async def printme(message: Message):
 	print(user1_data)
 
 
+@rt.message(Command("list_tags"))
+async def list_tags(message: Message, state: FSMContext):
+	user_data = get_user_data()
+	user_id = str(message.from_user.id)
+	tags = next((item["tags"] for item in user_data if item["user_id"] == user_id),None)
+	
+	if not tags:
+		await message.answer("Դուք դեռ հեշթեգեր չեք ընտրել")
+	else:
+		strtags = ", ".join(tags)
+		await message.answer(f"Ձեր ընտրած հեշթեգերը հետևյալն են {strtags}")
+
+
 @rt.channel_post()
 async def handle_channel_post(message: Message, bot: Bot):
 	all_users = get_user_data()
@@ -61,8 +74,9 @@ async def gethelp(message: Message):
 		✅ /start – Սկսել բոտի աշխատանքը։
 		✅ /reg – Գրանցվել բոտում՝ նշելով նախընտրած հեշթեգները։
 		✅ /tags – Տեսնել կամ փոփոխել ձեր ընտրված հեշթեգները։
+		✅ /list_tags ցուցադրել ընտրված հեշթեգերը:
 		✅ /unsubscribe – Չեղարկել բաժանորդագրությունը և դադարեցնել հաղորդագրությունների ստացումը։
-		✅ /restart – Վերագործարկել բոտը (օգտակար է խնդիրների դեպքում)։
+		✅ /restart – Վերագործարկել բոտը (օգտակար է տվյալները փոփոխելու և  խնդիրների դեպքում)։
 		✅ /help – Ցուցադրել այս հրահանգները։
 
 		📢 Ինչպես Օգտագործել
