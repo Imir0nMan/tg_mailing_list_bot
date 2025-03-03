@@ -1,8 +1,10 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+#list of messages sending times
 timelist = ["9:00", "12:00", "15:00", "18:00", "21:00", "00:00", "Realtime"]
 
+#list of hashtags
 hashtags = ["#Volunteering",
 "#YouthProjects",
 "#Education",
@@ -31,6 +33,7 @@ hashtags = ["#Volunteering",
 ]
 
 
+#function to show available times to get messages
 def settime():
 	keyboard = InlineKeyboardBuilder()
 	for elem in timelist:
@@ -38,6 +41,7 @@ def settime():
 	return keyboard.adjust(1).as_markup()
 
 
+#function to show available hashtags
 def inlinetags1():
 	keyboard = InlineKeyboardBuilder()
 	for elem in hashtags:

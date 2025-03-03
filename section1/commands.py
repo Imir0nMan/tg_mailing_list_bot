@@ -10,12 +10,13 @@ from section1.keyboards import timelist
 from constants import THE_ID
 import database.database as db
 
+#initialization of router (instead of dispatcher)
 rt = Router()
 
+#info of current user in registr
 usr_data = {}
-all_users_data = []
 
-
+#class for states
 class Registr(StatesGroup):
 	name = State()
 	age = State()
@@ -24,24 +25,26 @@ class Registr(StatesGroup):
 	hashtags = State()
 
 
+#command start and restart
 @rt.message(Command("start", "restart"))
 async def strt(message: Message, state: FSMContext):
 	await message.answer("""Բարև, նախ պետք է գրանցվել /reg հրամանով""")
 
 
+#for registration
 @rt.message(Command("reg"))
 async def reg(message: Message, state: FSMContext):
 	await state.set_state(Registr.name)
 	await message.answer("Անուն Ազգանուն")
 	
-
+#taking name
 @rt.message(Registr.name)
 async def stepone(message: Message, state: FSMContext):
 	await state.update_data(name=message.text)
 	await state.set_state(Registr.age)
 	await message.answer("Տարիք")
 
-
+#taking age (only digits from 12 to 85)
 @rt.message(Registr.age)
 async def steptwo(message: Message, state: FSMContext):
 	if not message.text.isdigit():
@@ -55,11 +58,11 @@ async def steptwo(message: Message, state: FSMContext):
 	else:
 		await message.answer("Տարիքը պետք է լինի 12-85 միջակայքում։ Խնդրում եմ կրկին մուտքագրել:")
 
-
+#take email (only @gmail.com #yahoo.com, @outlook.com, @mail.ru, @icloud.com)
 @rt.message(Registr.email)
 async def steptre(message: Message, state: FSMContext):
 	email = message.text.strip()
-	allowed_domains = ["gmail.com", "yahoo.com", "outlook.com", "mail.ru"]
+	allowed_domains = ["gmail.com", "yahoo.com", "outlook.com", "mail.ru", "icloud.com"]
 	email_pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.(?:com|net|org|edu|gov|mil|biz|info|ru|am)$"
 	if not re.match(email_pattern, email):
 		await message.answer("Խնդրում եմ մուտքագրել վավեր email (օրինակ՝ example@gmail.com)")
@@ -73,6 +76,7 @@ async def steptre(message: Message, state: FSMContext):
 	await message.answer("նախընտրելի ժամ՝ 8:00, 13:00, 21:00", reply_markup=kb.settime())
 
 
+#callback for available times via inline kb
 @rt.callback_query(F.data.in_(timelist))
 async def stepfor(callback: CallbackQuery, state: FSMContext):
 	await state.update_data(prfrd_time=callback.data)
@@ -80,18 +84,20 @@ async def stepfor(callback: CallbackQuery, state: FSMContext):
 	await callback.answer("ընտրությունը պահպանված է")
 
 
+#choose hashtags
 @rt.message(Command("tags"))
 async def tags(message: Message, state: FSMContext):
 	await state.set_state(Registr.hashtags)
 	await state.update_data(tags=[])
 	await message.answer("""
-		Ընտրեք տարբերակներից մինիմում 1ը,
-		ընտրված հեշթեգերը տեսնելու համար կիրառեք /list_tags հրամանը,
+		Ընտրեք տարբերակներից մաքսիմւմ 3ը,
 		սխալ հեշթեգ ընտրելու դեպքում կրկին սեղմեք /tags հրամանին 
 		այնուհետև նորից ընտրեք անհրաժեշտները,
-		ավարտելուց հետո օգտագործեք /finish հրամանը """, reply_markup=kb.inlinetags1())
+		ավարտելուց հետո օգտագործեք /finish հրամանը և
+		ընտրված հեշթեգերը տեսնելու համար կիրառեք /list_tags հրամանը""", reply_markup=kb.inlinetags1())
 
 
+#callback of inlinekb hashtags
 @rt.callback_query()
 async def handle_hashtags(callback: CallbackQuery, state: FSMContext):
 	hashtag = callback.data
@@ -111,26 +117,25 @@ async def handle_hashtags(callback: CallbackQuery, state: FSMContext):
 	await callback.answer(f"Դուք ընտրել եք {hashtag}-ը")
 
 
+#save data in exel file
 async def save_to_excel():
 	x_files = db.get_user_data()
 	df = pd.DataFrame(x_files)
 	df.to_excel("userdata.xlsx", index=False, engine="openpyxl")
 
 
+#finish registration
 @rt.message(Command('finish'))
 async def send_file(message: Message, state: FSMContext):
 	usr_data = {"user_id": message.from_user.id}
-	for i in all_users_data:
-		if i["user_id"] == usr_data["user_id"]:
-			all_users_data.remove(i)
 	usr_data.update(await state.get_data())
 	db.addtodb(usr_data)
-	all_users_data.append(usr_data.copy())
 	await state.clear()
 
 	await message.answer("Տվյաները հաջողությամբ պահպանվել են")
 
 
+#command for admin to get exel file
 @rt.message(Command('getdata'))
 async def send_excel(message: Message, bot: Bot):
 	await save_to_excel()

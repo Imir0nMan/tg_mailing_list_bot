@@ -8,12 +8,14 @@ from section1.commands import *
 
 user_message_queues = {}  # {user_id: deque(["msg1", "msg2", ...])}
 
+#print all users data
 @rt.message(Command("pt"))
 async def printme(message: Message):
 	user1_data = get_user_data()
 	print(user1_data)
 
 
+#list users choosen hashtags
 @rt.message(Command("list_tags"))
 async def list_tags(message: Message, state: FSMContext):
 	user_data = get_user_data()
@@ -27,6 +29,7 @@ async def list_tags(message: Message, state: FSMContext):
 		await message.answer(f"Ձեր ընտրած հեշթեգերը հետևյալն են {strtags}")
 
 
+#catch relevant posts from channel for users choosen hashtags
 @rt.channel_post()
 async def handle_channel_post(message: Message, bot: Bot):
 	all_users = get_user_data()
@@ -45,6 +48,7 @@ async def handle_channel_post(message: Message, bot: Bot):
 				user_message_queues[user_id].append(message.message_id)
 
 
+#keep posts into deque and send them in time user choosed
 async def send_accumulated_messages(bot):
 	while True:
 		all_users = get_user_data()
@@ -66,6 +70,7 @@ async def send_accumulated_messages(bot):
 		await asyncio.sleep(15)  # Check time every 30 seconds
 
 
+#show info of available commands for user
 @rt.message(Command("help"))
 async def gethelp(message: Message):
 	await message.answer("""
@@ -88,6 +93,8 @@ async def gethelp(message: Message):
 		🚀 Հարցերի դեպքում՝ օգտագործեք /help հրամանը։
 		""")
 
+
+#delede user from db (no longer will get messages)
 @rt.message(Command("unsubscribe"))
 async def deletemydata(message: Message):
 	user_id = message.from_user.id

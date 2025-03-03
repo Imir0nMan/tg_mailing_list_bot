@@ -2,6 +2,9 @@ import sqlite3
 import json
 from section1.commands import usr_data
 
+
+#this function is for add user into database
+#creates db if not exist and add each user
 def addtodb(usr_data):
 	conn = sqlite3.connect("database/main_database.db")
 	cursor = conn.cursor()
@@ -31,6 +34,7 @@ def addtodb(usr_data):
 	conn.close()
 
 
+#function return data of all users
 def get_user_data():
 	conn = sqlite3.connect("database/main_database.db")
 	cursor = conn.cursor()
@@ -54,7 +58,7 @@ def get_user_data():
 	users_list = list(users_dict.values())
 	return users_list
 
-
+#function delete certain user
 def delete_user(user_id):
     conn = sqlite3.connect("database/main_database.db")
     cursor = conn.cursor()
