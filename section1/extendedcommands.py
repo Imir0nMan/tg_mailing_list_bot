@@ -2,6 +2,7 @@ import asyncio
 import datetime
 from collections import deque
 from aiogram.enums import ContentType
+from aiogram.exceptions import TelegramBadRequest
 from constants import CHANNEL_ID
 from database.database import get_user_data, delete_user
 from section1.commands import *
@@ -100,3 +101,30 @@ async def deletemydata(message: Message):
 	user_id = message.from_user.id
 	delete_user(user_id)
 	await message.answer("Դուք հաջողությամբ ապաբաժանորդագրվել եք")
+
+
+async def is_user_in_channel(bot: Bot, user_id: int, channel_id: str) -> bool:
+	"""Check if the user is still in the channel."""
+	try:
+		member = await bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+		return member.status in ["member", "administrator", "creator"]
+	except TelegramBadRequest:  # Handles case when user is not found
+		return False
+	except Exception as e:
+		print(f"Error checking user {user_id}: {e}")
+		return False
+
+
+async def check_users_periodically(bot: Bot, channel_id: str):
+	"""Runs every 2 days to check if users are still in the channel."""
+	while True:
+		all_users = get_user_data()  # Ensure this returns a list of user IDs
+		for user in all_users:
+			user_id = int(user["user_id"])
+			in_channel = await is_user_in_channel(bot, user_id, channel_id)
+
+			if not in_channel:
+				delete_user(user_id)
+				print(f"Removed {user_id} from mailing list (left channel)")
+
+		await asyncio.sleep(172800)  # Wait 2 days
